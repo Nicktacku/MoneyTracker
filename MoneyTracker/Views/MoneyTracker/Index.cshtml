@@ -1,9 +1,52 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Expenses";
 }
 
 <div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <a asp-controller="Home" asp-action="Expenses" class="btn btn-primary">Overview</a>
-    <a asp-controller="Home" asp-action="CreateEditExpense" class="btn btn-primary">Create New</a>
+    <h1 class="display-4">Expenses</h1>
+    <br />
+    <table class="table" id="expensesTable">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Value</th>
+                <th>Description</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="expensesBody">
+            <!-- Data will be injected here -->
+        </tbody>
+    </table>
 </div>
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $.ajax({
+                url: '/api/MoneyTracker/expenses',
+                method: 'GET',
+                success: function (data) {
+                    let rows = '';
+                    data.forEach(function (expense) {
+                        rows += `
+                            <tr>
+                                <td>${expense.id}</td>
+                                <td>${expense.value}</td>
+                                <td>${expense.description}</td>
+                                <td>
+                                    <a href="/MoneyTracker/CreateEditExpense/${expense.id}">Edit</a>
+                                    <a href="/MoneyTracker/DeleteExpense/${expense.id}">Delete</a>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    $('#expensesBody').html(rows);
+                },
+                error: function () {
+                    alert('Failed to load expenses.');
+                }
+            });
+        });
+    </script>
+}

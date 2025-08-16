@@ -5,73 +5,100 @@ using System.Diagnostics;
 
 namespace MoneyTracker.Controllers
 {
+
+    [Route("api/[controller]")]
+    [ApiController]
     public class MoneyTrackerController : Controller
     {
         private readonly MoneyTrackerDbContext _context;
 
-        public MoneyTrackerController( MoneyTrackerDbContext context)
+        public MoneyTrackerController(MoneyTrackerDbContext context)
         {
             _context = context;
         }
 
+        [HttpGet]
         public IActionResult Index()
         {
             return View();
         }
 
-        public IActionResult Expenses()
+
+        // GET: api/MoneyTracker/expenses
+        [HttpGet("expenses")]
+        public ActionResult<IEnumerable<Expense>> GetExpenses()
         {
             var allExpenses = _context.Expenses.ToList();
-            return View(allExpenses);
+            return Ok(allExpenses);
         }
 
-        public IActionResult CreateEditExpense(int? id)
+        // GET: api/MoneyTracker/expense/{id}
+        [HttpGet("expense/{id}")]
+        public ActionResult<Expense> GetExpense(int id)
         {
-            if (id != null)
-            {
-                var expenseInDb = _context.Expenses.SingleOrDefault(expense => expense.Id == id);
+            var expense = _context.Expenses.SingleOrDefault(e => e.Id == id);
+            if (expense == null)
+                return NotFound();
 
-
-                return View(expenseInDb);
-            }
-
-
-            return View();
+            return Ok(expense);
         }
 
+        // POST: api/MoneyTracker/expense
+        [HttpPost("expense")]
+        public IActionResult CreateExpense([FromBody] Expense model)
+        {
+            if (model == null)
+                return BadRequest();
+
+            _context.Expenses.Add(model);
+            _context.SaveChanges();
+
+            return CreatedAtAction(nameof(GetExpense), new { id = model.Id }, model);
+        }
+
+        // PUT: api/MoneyTracker/expense/{id}
+        [HttpPut("expense/{id}")]
+        public IActionResult UpdateExpense(int id, [FromBody] Expense model)
+        {
+            if (id != model.Id)
+                return BadRequest();
+
+            var expenseInDb = _context.Expenses.SingleOrDefault(e => e.Id == id);
+            if (expenseInDb == null)
+                return NotFound();
+
+            _context.Entry(expenseInDb).CurrentValues.SetValues(model);
+            _context.SaveChanges();
+
+            return NoContent();
+        }
+
+        // DELETE: api/MoneyTracker/expense/{id}
+        [HttpDelete("expense/{id}")]
         public IActionResult DeleteExpense(int id)
         {
-            var expenseIdDb = _context.Expenses.SingleOrDefault(expense => expense.Id == id);
-            _context.Expenses.Remove(expenseIdDb);
+            var expense = _context.Expenses.SingleOrDefault(e => e.Id == id);
+            if (expense == null)
+                return NotFound();
+
+            _context.Expenses.Remove(expense);
             _context.SaveChanges();
 
-            return RedirectToAction("Expenses");
+            return NoContent();
         }
 
-        public IActionResult CreateEditExpenseForm(Expense model)
-        {
-            if (model.Id == 0)
-            {
-                _context.Expenses.Add(model);
-
-            }
-            else
-            {
-                _context.Expenses.Update(model);
-            }
-
-            _context.SaveChanges();
-
-
-
-            return RedirectToAction("Expenses");
-        }
-
-
+        // GET: api/MoneyTracker/error
+        [HttpGet("error")]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            var errorModel = new ErrorViewModel
+            {
+                RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+            };
+            return Problem(detail: $"Request ID: {errorModel.RequestId}");
         }
     }
+
+
 }
