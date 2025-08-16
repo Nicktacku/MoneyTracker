@@ -24,7 +24,7 @@ namespace MoneyTracker.Controllers
         }
 
 
-        // GET: api/MoneyTracker/expenses
+        // GET: api/MoneyTracker/expenses all
         [HttpGet("expenses")]
         public ActionResult<IEnumerable<Expense>> GetExpenses()
         {
@@ -32,9 +32,9 @@ namespace MoneyTracker.Controllers
             return Ok(allExpenses);
         }
 
-        // GET: api/MoneyTracker/expense/{id}
+        // GET: api/MoneyTracker/expense/{id} view per item
         [HttpGet("expense/{id}")]
-        public ActionResult<Expense> GetExpense(int id)
+        public ActionResult<Expense> GetExpensePerItem(int id)
         {
             var expense = _context.Expenses.SingleOrDefault(e => e.Id == id);
             if (expense == null)
@@ -43,18 +43,20 @@ namespace MoneyTracker.Controllers
             return Ok(expense);
         }
 
-        // POST: api/MoneyTracker/expense
-        [HttpPost("expense")]
-        public IActionResult CreateExpense([FromBody] Expense model)
-        {
-            if (model == null)
-                return BadRequest();
 
-            _context.Expenses.Add(model);
-            _context.SaveChanges();
+        // gagawa ko madal tapos save balik 
+        //// POST: api/MoneyTracker/expense
+        //[HttpPost("expense")]
+        //public IActionResult CreateExpense([FromBody] Expense model)
+        //{
+        //    if (model == null)
+        //        return BadRequest();
 
-            return CreatedAtAction(nameof(GetExpense), new { id = model.Id }, model);
-        }
+        //    _context.Expenses.Add(model);
+        //    _context.SaveChanges();
+
+        //    return CreatedAtAction(nameof(GetExpense), new { id = model.Id }, model);
+        //}
 
         // PUT: api/MoneyTracker/expense/{id}
         [HttpPut("expense/{id}")]

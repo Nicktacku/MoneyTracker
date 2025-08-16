@@ -20,13 +20,24 @@
     </table>
 </div>
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
+            Swal.fire({
+                title: 'Loading expenses...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
             $.ajax({
                 url: '/api/MoneyTracker/expenses',
                 method: 'GET',
                 success: function (data) {
+                    Swal.close(); // Close loading alert
+
                     let rows = '';
                     data.forEach(function (expense) {
                         rows += `
@@ -44,9 +55,16 @@
                     $('#expensesBody').html(rows);
                 },
                 error: function () {
-                    alert('Failed to load expenses.');
+                    Swal.close(); // Close loading alert
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Oops...',
+                        text: 'Failed to load expenses!',
+                        confirmButtonColor: '#d33'
+                    });
                 }
             });
         });
+
     </script>
 }
