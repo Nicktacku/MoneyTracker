@@ -33,7 +33,7 @@ namespace MoneyTracker
 
             app.MapControllerRoute(
                 name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}");
+                pattern: "{controller=MoneyTracker}/{action=Index}/{id?}");
 
             app.Run();
         }

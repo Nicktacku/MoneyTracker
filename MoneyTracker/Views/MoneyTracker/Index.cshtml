@@ -1,9 +1,215 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Index";
 }
 
+@model List<Expense>
+
 <div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <a asp-controller="Home" asp-action="Expenses" class="btn btn-primary">Overview</a>
-    <a asp-controller="Home" asp-action="CreateEditExpense" class="btn btn-primary">Create New</a>
+    <h1 class="display-4">Expenses</h1>
+    <br />
+    <div class="d-flex justify-content-end">
+        <button id="btnCreate" class="btn btn-primary">
+            Create New
+        </button>
+        <button id="btnExport" class="btn btn-success">
+            Export CSV
+        </button>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Value</th>
+                <th>Description</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+        </tbody>
+    </table>
+
+    <!-- Modal -->
+    <div class="modal fade" id="expenseModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Expense</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="expenseForm">
+                        <input type="hidden" id="expenseId" name="Id" />
+
+                        <label class="mt-2">Value</label>
+                        <input class="form-control" type="number" id="expenseValue" name="Value" step="1" required />
+
+                        <label class="mt-2">Description</label>
+                        <input class="form-control" type="text" id="expenseDescription" name="Description" required />
+
+                        <button class="btn btn-primary mt-3" type="submit">Save</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        let expenseData = []; // store expenses globally for CSV export
+
+        $(document).ready(function () {
+            loadExpenses();
+
+            // ✅ Load Expenses
+            function loadExpenses() {
+                Swal.fire({
+                    title: "Loading expenses...",
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                $.ajax({
+                    url: '/api/MoneyTracker/Display',
+                    type: 'GET',
+                    success: function (data) {
+                        Swal.close();
+                        expenseData = data; // save for export
+                        var tbody = $('table tbody');
+                        tbody.empty();
+
+                        data.forEach(function (expense) {
+                            tbody.append(`
+                                <tr>
+                                    <td>${expense.value}</td>
+                                    <td>${expense.description}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning edit-btn"
+                                                data-id="${expense.id}"
+                                                data-value="${expense.value}"
+                                                data-description="${expense.description}">
+                                            Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-danger delete-btn" data-id="${expense.id}">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            `);
+                        });
+                    },
+                    error: function () {
+                        Swal.fire("Error", "Failed to load expenses.", "error");
+                    }
+                });
+            }
+
+            // ✅ Export CSV
+            $("#btnExport").click(function () {
+                if (expenseData.length === 0) {
+                    Swal.fire("No Data", "There are no expenses to export.", "info");
+                    return;
+                }
+
+                let csvContent = "data:text/csv;charset=utf-8,";
+                csvContent += "Id,Value,Description\n"; // headers
+
+                expenseData.forEach(exp => {
+                    let row = `${exp.id},${exp.value},"${exp.description}"`;
+                    csvContent += row + "\n";
+                });
+
+                // Create download link
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "expenses.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+
+            // Delete
+            $(document).on("click", ".delete-btn", function () {
+                var id = $(this).data("id");
+
+                Swal.fire({
+                    title: "Are you sure?",
+                    text: "This expense will be permanently deleted.",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#d33",
+                    cancelButtonColor: "#3085d6",
+                    confirmButtonText: "Yes, delete it!"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: '/api/MoneyTracker/Delete/' + id,
+                            type: 'POST',
+                            success: function () {
+                                loadExpenses();
+                                Swal.fire("Deleted!", "Expense has been removed.", "success");
+                            },
+                            error: function () {
+                                Swal.fire("Error", "Failed to delete expense.", "error");
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Create
+            $("#btnCreate").click(function () {
+                $("#expenseId").val("0");
+                $("#expenseValue").val("");
+                $("#expenseDescription").val("");
+                var modal = new bootstrap.Modal(document.getElementById("expenseModal"));
+                modal.show();
+            });
+
+
+        // Edit
+        $(document).on("click", ".edit-btn", function () {
+            $("#expenseId").val($(this).data("id"));
+            $("#expenseValue").val($(this).data("value"));
+            $("#expenseDescription").val($(this).data("description"));
+            var modal = new bootstrap.Modal(document.getElementById("expenseModal"));
+            modal.show();
+        });
+
+
+            // Save (Create/Edit)
+            $("#expenseForm").submit(function (e) {
+                e.preventDefault();
+
+                console.log($(this).serialize());
+
+                $.ajax({
+                    url: "/api/MoneyTracker/CreateEdit",
+                    type: "POST",
+                    data: $(this).serialize(),
+                    success: function () {
+                        var modalEl = document.getElementById("expenseModal");
+                        var modal = bootstrap.Modal.getInstance(modalEl);
+                        modal.hide();
+
+                        Swal.fire("Success", "Expense saved successfully!", "success");
+                        loadExpenses();
+                    },
+                    error: function () {
+                        Swal.fire("Error", "Failed to save expense.", "error");
+                    }
+                });
+            });
+        });
+    </script>
+}
+

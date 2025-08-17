@@ -5,68 +5,78 @@ using System.Diagnostics;
 
 namespace MoneyTracker.Controllers
 {
+    [Route("api/[controller]")]
+    [ApiController]
     public class MoneyTrackerController : Controller
     {
         private readonly MoneyTrackerDbContext _context;
 
-        public MoneyTrackerController( MoneyTrackerDbContext context)
+        public MoneyTrackerController(MoneyTrackerDbContext context)
         {
             _context = context;
         }
 
+        // View
+        [HttpGet]
+        [Route("/MoneyTracker")]
+        [Route("/")]
         public IActionResult Index()
         {
             return View();
         }
 
+        // Get all expenses (AJAX)
+        [HttpGet("Display")]
         public IActionResult Expenses()
         {
             var allExpenses = _context.Expenses.ToList();
-            return View(allExpenses);
+            return Json(allExpenses);
         }
 
-        public IActionResult CreateEditExpense(int? id)
+        [HttpPost("CreateEdit")]
+        public IActionResult CreateEditExpense([FromForm] Expense model)
         {
-            if (id != null)
+            if (!ModelState.IsValid)
             {
-                var expenseInDb = _context.Expenses.SingleOrDefault(expense => expense.Id == id);
-
-
-                return View(expenseInDb);
+                return BadRequest(ModelState);
             }
 
+            var existingExpense = _context.Expenses.FirstOrDefault(e => e.Id == model.Id);
 
-            return View();
-        }
-
-        public IActionResult DeleteExpense(int id)
-        {
-            var expenseIdDb = _context.Expenses.SingleOrDefault(expense => expense.Id == id);
-            _context.Expenses.Remove(expenseIdDb);
-            _context.SaveChanges();
-
-            return RedirectToAction("Expenses");
-        }
-
-        public IActionResult CreateEditExpenseForm(Expense model)
-        {
-            if (model.Id == 0)
+            if (existingExpense == null)
             {
+                // ✅ New record
                 _context.Expenses.Add(model);
-
             }
             else
             {
-                _context.Expenses.Update(model);
+                // ✅ Update only existing
+                existingExpense.Value = model.Value;
+                existingExpense.Description = model.Description;
+
+                _context.Expenses.Update(existingExpense);
             }
 
             _context.SaveChanges();
 
-
-
-            return RedirectToAction("Expenses");
+            return Ok(model); // return JSON instead of redirect
         }
 
+        // Delete (AJAX)
+        [HttpPost("Delete/{id}")]
+        public IActionResult DeleteExpense(int id)
+        {
+            var expenseInDb = _context.Expenses.SingleOrDefault(expense => expense.Id == id);
+            if (expenseInDb == null)
+            {
+                return NotFound();
+            }
+
+            _context.Expenses.Remove(expenseInDb);
+            _context.SaveChanges();
+
+            return Ok();
+        }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
